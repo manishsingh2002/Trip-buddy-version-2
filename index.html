@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TripBuddy — Ultimate Live Journey App</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root {
+  /* Backgrounds & Surfaces */
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface2: #f1f4fa;
+  --surface3: #e9edf6;
+
+  /* Borders */
+  --border: #0000000d;
+  --border2: #00000014;
+  --border3: #00000022;
+
+  /* Text */
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+
+  /* Primary Accent */
+  --accent: #3d8bff;
+  --accent-glow: #3d8bff26;
+
+  /* Brand (unchanged, already light-safe) */
+  --brand: #d97706;
+  --brand-light: #fef3c7;
+  --brand-dark: #92400e;
+
+  /* Status Colors */
+  --red: #dc2626;
+  --green: #16a34a;
+  --gold: #ca8a04;
+  --pink: #ec4899;
+  --sky: #0284c7;
+  --purple: #7c3aed;
+  --orange: #f97316;
+  --orange-glow: #f9731626;
+
+  /* Glass / Blur */
+  --glass: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.08);
+
+  /* Shadows */
+  --shadow: rgba(0, 0, 0, 0.08);
+  --shadow-strong: rgba(0, 0, 0, 0.16);
+
+  /* Device */
+  --r: 390px;
+  --ph: 844px;
+}
+
+body{font-family:'DM Sans',sans-serif;background:#030508;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:40px 20px 80px;color:var(--text);}
+
+/* ── PAGE HEADER ── */
+.page-header{text-align:center;margin-bottom:28px}
+.page-header h1{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;letter-spacing:-0.02em;color:#fff}
+.page-header h1 span{background:linear-gradient(135deg,var(--orange),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.page-header p{font-size:12px;color:var(--text2);margin-top:6px}
+
+/* ── SCREEN NAV ── */
+.screen-nav{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-bottom:32px;max-width:720px}
+.screen-btn{background:var(--surface);border:1px solid var(--border2);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:7px 14px;border-radius:100px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.screen-btn:hover{border-color:var(--accent);color:var(--accent)}
+.screen-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── PHONE ── */
+.phone-wrap{position:relative;width:var(--r);filter:drop-shadow(0 40px 80px #000c) drop-shadow(0 0 60px #3d8bff15)}
+.phone-shell{width:var(--r);height:var(--ph);background:#080c14;border-radius:52px;border:1.5px solid #ffffff20;position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff06,0 0 0 8px #040608,0 0 0 9.5px #141926}
+.phone-shell::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#040608;border-radius:0 0 24px 24px;z-index:200}
+
+/* ── SCREEN ── */
+.screen{position:absolute;inset:0;border-radius:52px;overflow:hidden;display:none;flex-direction:column;background:var(--bg)}
+.screen.active{display:flex;animation:screenIn .3s ease}
+@keyframes screenIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Status Bar */
+.status-bar{height:44px;padding:14px 24px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:50;position:relative}
+.status-time{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff}
+.status-icons{display:flex;gap:6px;align-items:center}
+.battery{width:22px;height:11px;border:1.5px solid #fff;border-radius:3px;position:relative;display:flex;align-items:center;padding:2px}
+.battery::after{content:'';position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:3px;height:5px;background:#fff;border-radius:0 1px 1px 0}
+.battery-fill{width:70%;height:100%;background:var(--green);border-radius:1px}
+
+/* Scroll content */
+.screen-content{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.screen-content::-webkit-scrollbar{display:none}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{height:72px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px 8px;flex-shrink:0;z-index:50}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;cursor:pointer;padding:6px 4px;border-radius:12px;transition:all .2s}
+.nav-item.active .nav-icon{filter:drop-shadow(0 0 8px var(--accent))}
+.nav-item.active .nav-dot{opacity:1}
+.nav-icon{font-size:22px;transition:all .2s}
+.nav-label{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.nav-item.active .nav-label{color:var(--accent)}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:0;transition:all .2s}
+.nav-fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--gold));display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 24px var(--orange-glow);cursor:pointer;transition:transform .2s;flex-shrink:0}
+.nav-fab:active{transform:scale(.92)}
+
+/* ── SHARED COMPONENTS ── */
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.pill-live{background:#ef444420;color:var(--red);border:1px solid #ef444430}
+.pill-live::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1.4s infinite}
+.pill-train{background:#f5c84220;color:var(--gold)}
+.pill-flight{background:#3d8bff20;color:var(--accent)}
+.pill-walk{background:#22d47a20;color:var(--green)}
+.pill-sos{background:#ef444415;color:var(--red);border:1px solid #ef444430}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden}
+.section-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+
+.btn-primary{width:100%;padding:15px;background:linear-gradient(135deg,var(--orange),#ff7a5e);border:none;border-radius:16px;color:#fff;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.01em;box-shadow:0 8px 32px var(--orange-glow);transition:transform .15s}
+.btn-primary:active{transform:scale(.97)}
+.btn-accent{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#5fa3ff);border:none;border-radius:16px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 24px var(--accent-glow);transition:transform .15s}
+.btn-accent:active{transform:scale(.97)}
+
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;font-family:'Syne',sans-serif}
+
+/* ── MAP STYLES ── */
+.map-bg{background:#0a1322;position:relative;overflow:hidden}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(#ffffff04 1px,transparent 1px),linear-gradient(90deg,#ffffff04 1px,transparent 1px);background-size:26px 26px}
+.map-dots{position:absolute;inset:0;background-image:radial-gradient(circle,#3d8bff07 1.5px,transparent 1.5px);background-size:18px 18px}
+
+/* toggle */
+.toggle{width:50px;height:27px;border-radius:14px;background:var(--surface3);border:1px solid var(--border2);position:relative;cursor:pointer;transition:background .3s;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle-knob{position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 2px 6px #0008;transition:left .3s}
+.toggle.on .toggle-knob{left:25px}
+
+/* ═══════════════════════════════════════════════════
+   S1 — SPLASH
+═══════════════════════════════════════════════════ */
+#s-splash{background:var(--bg)}
+.splash-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;position:relative;overflow:hidden}
+.splash-orb1{position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,#3d8bff18,transparent 70%);top:5%;left:-20%}
+.splash-orb2{position:absolute;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,#ff5f3d18,transparent 70%);bottom:5%;right:-10%}
+.splash-orb3{position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,#f5c84212,transparent 70%);top:40%;left:60%}
+.splash-logo{width:86px;height:86px;border-radius:30px;background:linear-gradient(135deg,#1a2840,#0d1628);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 0 40px var(--accent-glow);margin-bottom:22px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.splash-title{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;letter-spacing:-.03em;text-align:center;color:#fff;line-height:1;margin-bottom:6px}
+.splash-title span{background:linear-gradient(135deg,var(--orange),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.splash-sub{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;max-width:260px;margin-bottom:32px}
+.splash-features{display:flex;flex-direction:column;gap:10px;width:100%;margin-bottom:32px}
+.sf-item{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px}
+.sf-icon{font-size:22px;flex-shrink:0;width:36px;text-align:center}
+.sf-text{font-size:12px;color:var(--text2);line-height:1.4}
+.sf-text strong{color:var(--text);display:block;font-size:13px;margin-bottom:1px}
+
+/* ═══════════════════════════════════════════════════
+   S2 — HOME FEED
+═══════════════════════════════════════════════════ */
+.home-header{padding:20px 20px 14px;display:flex;justify-content:space-between;align-items:center}
+.home-greeting{font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text3)}
+.home-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.header-right{display:flex;gap:8px;align-items:center}
+.notif-btn{width:40px;height:40px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;position:relative}
+.notif-badge{position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid var(--bg)}
+
+.stories-row{padding:0 20px 16px;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none}
+.stories-row::-webkit-scrollbar{display:none}
+.story-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;cursor:pointer}
+.story-ring{width:58px;height:58px;border-radius:50%;padding:2.5px;background:linear-gradient(135deg,var(--orange),var(--gold))}
+.story-ring.live-ring{animation:ring-pulse 2s infinite}
+@keyframes ring-pulse{0%,100%{box-shadow:0 0 0 0 #ff5f3d00}50%{box-shadow:0 0 0 3px #ff5f3d40}}
+.story-inner{width:100%;height:100%;border-radius:50%;background:var(--surface2);border:2.5px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px}
+.story-name{font-size:10px;color:var(--text2);font-weight:500}
+.story-name.live-name{color:var(--orange);font-weight:700}
+.story-add{width:58px;height:58px;border-radius:50%;background:var(--surface2);border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;flex-shrink:0}
+
+/* Companion Callout */
+.companion-callout{margin:0 16px 14px;background:linear-gradient(135deg,#0f1a2e,#1a0f2e);border:1px solid var(--accent);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.cc-icon{width:44px;height:44px;border-radius:14px;background:var(--accent-glow);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.cc-text strong{font-size:13px;font-weight:700;color:#fff;display:block;margin-bottom:2px}
+.cc-text span{font-size:11px;color:var(--text2)}
+.cc-badge{margin-left:auto;background:var(--accent);color:#fff;border-radius:100px;padding:3px 10px;font-size:10px;font-weight:700}
+
+/* Journey cards */
+.jcard{margin:0 16px 14px;background:var(--surface);border:1px solid var(--border);border-radius:22px;overflow:hidden}
+.jcard-map{height:150px;position:relative}
+.jcard-map-bg{width:100%;height:100%;background:#0a1322;position:relative;overflow:hidden}
+.jcard-overlay{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px}
+.jcard-body{padding:13px 15px 15px}
+.jcard-user{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.jcard-username{font-size:13px;font-weight:600;color:#fff}
+.jcard-time{font-size:10px;color:var(--text3)}
+.jcard-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;letter-spacing:-.01em;margin-bottom:6px}
+.jcard-caption{font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px}
+.jcard-reactions{display:flex;gap:7px;margin-bottom:10px}
+.react-btn{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;transition:all .2s}
+.react-btn:hover{border-color:var(--accent)}
+.react-count{font-size:10px;color:var(--text2);font-weight:500}
+.jcard-stats{display:flex;gap:14px;padding-top:10px;border-top:1px solid var(--border)}
+.jcard-stat{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px}
+.jcard-stat strong{color:var(--text);font-weight:600}
+
+/* ═══════════════════════════════════════════════════
+   S3 — LIVE MAP VIEW
+═══════════════════════════════════════════════════ */
+#s-live{position:relative}
+.live-map-full{position:absolute;inset:0;background:#08111f;overflow:hidden}
+#leaflet-container{position:absolute;inset:0;z-index:0}
+.live-map-grid{position:absolute;inset:0;background-image:linear-gradient(#3d8bff05 1px,transparent 1px),linear-gradient(90deg,#3d8bff05 1px,transparent 1px);background-size:30px 30px;pointer-events:none;z-index:1}
+.live-map-dots{position:absolute;inset:0;background-image:radial-gradient(circle,#3d8bff06 1.5px,transparent 1.5px);background-size:20px 20px;pointer-events:none;z-index:1}
+
+/* route vis */
+.live-route-line{position:absolute;top:42%;left:8%;right:30%;height:3px;background:repeating-linear-gradient(90deg,var(--gold) 0,var(--gold) 10px,transparent 10px,transparent 18px);transform:translateY(-50%);border-radius:2px;filter:drop-shadow(0 0 6px var(--gold));z-index:2}
+.live-stop-mk{position:absolute;z-index:3}
+.lsm-dot{width:14px;height:14px;border-radius:50%;border:2.5px solid var(--bg)}
+.lsm-label{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:2px 7px;font-size:9px;font-weight:700;color:var(--text);white-space:nowrap}
+.live-pin-wrap{position:absolute;top:42%;right:22%;transform:translate(-50%,-50%);z-index:4}
+.live-pin-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;border:1.5px solid #ef444460;animation:ring-expand 2s infinite}
+@keyframes ring-expand{0%{width:18px;height:18px;opacity:1}100%{width:56px;height:56px;opacity:0}}
+.live-pin-core{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 20px var(--red);animation:pin-pulse 2s infinite;position:relative;z-index:2}
+@keyframes pin-pulse{0%,100%{box-shadow:0 0 0 0 #ef444460,0 0 20px var(--red)}50%{box-shadow:0 0 0 10px #ef444400,0 0 20px var(--red)}}
+
+/* top overlay */
+.live-topbar{position:absolute;top:0;left:0;right:0;padding:46px 14px 14px;background:linear-gradient(to bottom,#080c14ee,transparent);z-index:20;display:flex;justify-content:space-between;align-items:flex-start}
+.live-journey-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff}
+.live-sub-info{font-size:10px;color:var(--text2);margin-top:2px;display:flex;align-items:center;gap:6px}
+.live-ctrl-btns{display:flex;gap:7px}
+.live-ctrl-btn{width:36px;height:36px;border-radius:12px;background:#000000bb;backdrop-filter:blur(10px);border:1px solid #ffffff18;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all .2s}
+.live-ctrl-btn:hover{border-color:var(--accent)}
+
+/* SOS floating button */
+.sos-float{position:absolute;top:50%;left:14px;transform:translateY(-50%);z-index:25}
+.sos-float-btn{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#ff1a1a,#cc0000);border:1.5px solid #ff444444;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px #ef444450;animation:sos-glow 3s infinite}
+@keyframes sos-glow{0%,100%{box-shadow:0 4px 20px #ef444450}50%{box-shadow:0 4px 30px #ef444480}}
+.sos-float-btn span:first-child{font-size:18px}
+.sos-float-btn span:last-child{font-size:8px;font-weight:800;font-family:'Syne',sans-serif;color:#fff;letter-spacing:.05em}
+
+/* Group watch pill */
+.group-watch-pill{position:absolute;bottom:310px;right:14px;z-index:25;background:#000000bb;backdrop-filter:blur(10px);border:1px solid var(--accent);border-radius:100px;padding:7px 12px;display:flex;align-items:center;gap:7px;cursor:pointer}
+.gwp-avatars{display:flex}
+.gwp-av{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bg);font-size:11px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--orange),var(--gold))}
+.gwp-av:nth-child(2){margin-left:-8px;background:linear-gradient(135deg,var(--accent),var(--purple))}
+.gwp-av:nth-child(3){margin-left:-8px;background:linear-gradient(135deg,var(--green),var(--sky))}
+.gwp-text{font-size:10px;font-weight:700;color:var(--accent)}
+
+/* bottom sheet */
+.live-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:28px 28px 0 0;border:1px solid var(--border2);padding:8px 0 0;z-index:20}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--border2);margin:4px auto 12px}
+.curr-stop-card{margin:0 14px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:flex-start}
+.csc-icon{width:42px;height:42px;border-radius:13px;background:#f5c84215;border:1px solid #f5c84230;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.csc-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+.csc-desc{font-size:11px;color:var(--text2);line-height:1.5}
+.csc-eta{font-size:10px;color:var(--gold);margin-top:5px;font-weight:700}
+.live-qa{display:flex;gap:7px;padding:0 14px 12px;overflow-x:auto;scrollbar-width:none}
+.live-qa::-webkit-scrollbar{display:none}
+.qa-btn{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:7px 12px;font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;cursor:pointer;flex-shrink:0;transition:all .2s}
+.qa-btn:hover{border-color:var(--accent);color:var(--accent)}
+.live-log-btn{margin:0 14px 14px;padding:13px;background:linear-gradient(135deg,var(--orange),#ff7a5e);border:none;border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 4px 20px var(--orange-glow)}
+
+/* ═══════════════════════════════════════════════════
+   S4 — LOG A STOP
+═══════════════════════════════════════════════════ */
+.log-header{padding:18px 18px 14px;display:flex;align-items:center;gap:12px}
+.back-btn{width:36px;height:36px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+.log-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:-.01em}
+.photo-area{margin:0 16px 14px;height:165px;border-radius:18px;border:2px dashed var(--border2);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;position:relative;overflow:hidden}
+.photo-thumbs{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px}
+.photo-thumb{background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:26px}
+.photo-add-cell{background:var(--surface2);border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--text3)}
+.form-sec{padding:0 16px}
+.form-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.form-input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:13px;padding:13px 15px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:14px;outline:none;resize:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+.transport-grid{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.tp{padding:7px 12px;border-radius:100px;background:var(--surface2);border:1.5px solid var(--border);font-size:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px}
+.tp.sel{border-color:var(--gold);background:#f5c84215;color:var(--gold)}
+.loc-pill{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:11px 13px;margin-bottom:14px}
+.loc-name{font-size:12px;font-weight:600;color:#fff}
+.loc-coords{font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.loc-ok{margin-left:auto;font-size:10px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:4px}
+.loc-ok::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green)}
+.privacy-row{display:flex;gap:8px;margin-bottom:14px}
+.prv-opt{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 10px;display:flex;align-items:center;gap:7px;cursor:pointer}
+.prv-icon{font-size:16px}
+.prv-title{font-size:11px;font-weight:700;color:#fff}
+.prv-sub{font-size:9px;color:var(--text3)}
+
+/* ═══════════════════════════════════════════════════
+   S5 — TIMELINE
+═══════════════════════════════════════════════════ */
+.tl-hero{height:190px;position:relative;overflow:hidden}
+.tl-hero-bg{width:100%;height:100%;background:#081220;position:relative}
+.tl-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,var(--bg),transparent 60%)}
+.tl-hero-topbar{position:absolute;top:0;left:0;right:0;padding:48px 16px 0;display:flex;justify-content:space-between;align-items:center}
+.tl-meta{padding:14px 18px 0}
+.tl-journey-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:6px}
+.tl-author{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.tl-author-name{font-size:12px;color:var(--text2)}
+.tl-watchers{font-size:11px;color:var(--orange);font-weight:700;margin-left:auto}
+.stats-row{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin:0 16px 16px}
+.sr-stat{flex:1;padding:11px 8px;text-align:center;border-right:1px solid var(--border)}
+.sr-stat:last-child{border-right:none}
+.sr-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;line-height:1}
+.sr-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+/* timeline nodes */
+.timeline{padding:0 18px 20px}
+.tl-item{display:flex;gap:12px;margin-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;width:28px;flex-shrink:0}
+.tl-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--bg);flex-shrink:0}
+.tl-line{flex:1;width:2px;background:var(--border2);border-radius:1px;min-height:30px}
+.tl-right{padding-bottom:16px;flex:1}
+.tl-stop-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.tl-stop-img{height:110px;width:100%;display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;background:var(--surface2)}
+.tl-stop-img-lbl{position:absolute;bottom:6px;left:8px;background:#000000bb;border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700;color:#fff}
+.tl-stop-body{padding:10px}
+.tl-stop-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
+.tl-stop-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:7px}
+.tl-stop-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.tl-tag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;gap:3px}
+.tl-reactions{display:flex;gap:6px}
+.tl-react{font-size:13px;background:var(--surface2);border-radius:7px;padding:4px 8px;display:flex;align-items:center;gap:3px;cursor:pointer}
+.tl-react span{font-size:9px;color:var(--text2)}
+/* segment connector */
+.seg-conn{display:flex;gap:12px;margin-bottom:0}
+.seg-left{display:flex;flex-direction:column;align-items:center;width:28px}
+.seg-line{flex:1;width:2px;background:var(--border2);border-radius:1px;min-height:16px}
+.seg-right{padding:7px 0;flex:1;display:flex;align-items:center}
+.seg-pill{padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;white-space:nowrap}
+
+/* ═══════════════════════════════════════════════════
+   S6 — COMPANIONS & GROUPS
+═══════════════════════════════════════════════════ */
+.comp-header{padding:18px 18px 12px}
+.comp-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:4px}
+.comp-sub{font-size:12px;color:var(--text2)}
+/* Nearby travelers */
+.nearby-map{margin:0 16px 14px;height:140px;border-radius:18px;background:#0a1322;position:relative;overflow:hidden;cursor:pointer}
+.nm-ping{position:absolute;transform:translate(-50%,-50%)}
+.nm-ping-core{width:12px;height:12px;border-radius:50%;border:2px solid var(--bg)}
+.nm-ping-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:1.5px solid;animation:ring-expand 2s infinite;opacity:.6}
+.nm-label{position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700;color:var(--text);white-space:nowrap}
+.nm-count-badge{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:#000000bb;backdrop-filter:blur(8px);border:1px solid var(--border2);border-radius:100px;padding:5px 14px;font-size:11px;font-weight:700;color:var(--accent)}
+/* traveler cards */
+.traveler-card{margin:0 16px 10px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:13px;display:flex;gap:12px;align-items:center}
+.tc-avatar{width:46px;height:46px;font-size:18px;flex-shrink:0;position:relative}
+.tc-online{position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface);background:var(--green)}
+.tc-name{font-size:13px;font-weight:700;color:#fff}
+.tc-dest{font-size:11px;color:var(--text2);margin-top:1px}
+.tc-tags{display:flex;gap:5px;margin-top:5px}
+.tc-tag{font-size:9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;color:var(--text3)}
+.tc-actions{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.tc-btn{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:none;transition:all .2s}
+.tc-btn-msg{background:var(--accent-glow);color:var(--accent);border:1px solid var(--accent)}
+.tc-btn-add{background:#22d47a15;color:var(--green);border:1px solid var(--green)}
+/* groups */
+.group-card{margin:0 16px 10px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:13px;cursor:pointer}
+.gc-header{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.gc-icon{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.gc-name{font-size:14px;font-weight:700;color:#fff}
+.gc-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.gc-members{display:flex;align-items:center;gap:-6px;margin-bottom:8px}
+.gc-mem-av{width:28px;height:28px;border-radius:50%;border:2px solid var(--surface);font-size:13px;display:flex;align-items:center;justify-content:center}
+.gc-mem-av:not(:first-child){margin-left:-10px}
+.gc-more{width:28px;height:28px;border-radius:50%;border:2px solid var(--surface);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text2);margin-left:-10px}
+.gc-actions{display:flex;gap:7px}
+.gc-btn{flex:1;padding:8px;border-radius:10px;font-size:11px;font-weight:700;border:none;cursor:pointer;text-align:center;transition:all .2s}
+.gc-btn-join{background:var(--accent);color:#fff}
+.gc-btn-msg{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+/* create group */
+.create-group-btn{margin:0 16px 14px;padding:13px;border:2px dashed var(--border2);border-radius:14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all .2s}
+.create-group-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ═══════════════════════════════════════════════════
+   S7 — MESSAGES
+═══════════════════════════════════════════════════ */
+.msg-header{padding:18px 18px 12px;display:flex;align-items:center;gap:12px}
+.msg-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff}
+.msg-search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;margin:0 16px 14px}
+.msg-search-icon{font-size:14px}
+.msg-search-ph{font-size:13px;color:var(--text3)}
+/* thread */
+.msg-thread{display:flex;gap:12px;padding:11px 16px;border-radius:0;cursor:pointer;transition:background .15s;align-items:center}
+.msg-thread:hover{background:var(--surface2)}
+.thread-av{width:46px;height:46px;font-size:20px;flex-shrink:0;position:relative}
+.thread-av-online{position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--bg);background:var(--green)}
+.thread-av-group{position:absolute;bottom:0;right:-4px;width:16px;height:16px;border-radius:50%;border:2px solid var(--bg);font-size:9px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-weight:700}
+.thread-info{flex:1;min-width:0}
+.thread-name{font-size:13px;font-weight:700;color:#fff}
+.thread-last{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.thread-meta{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.thread-time{font-size:10px;color:var(--text3)}
+.thread-unread{background:var(--accent);color:#fff;width:19px;height:19px;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.thread-sos{background:var(--red);color:#fff;border-radius:100px;padding:2px 8px;font-size:9px;font-weight:700}
+.msg-divider{margin:6px 16px;height:1px;background:var(--border)}
+
+/* ═══════════════════════════════════════════════════
+   S8 — CHAT VIEW
+═══════════════════════════════════════════════════ */
+#s-chat{flex-direction:column}
+.chat-topbar{padding:44px 14px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.chat-back{font-size:20px;cursor:pointer;padding:4px}
+.chat-av{width:38px;height:38px;font-size:17px}
+.chat-name{font-size:14px;font-weight:700;color:#fff}
+.chat-status{font-size:10px;color:var(--green);display:flex;align-items:center;gap:4px}
+.chat-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green)}
+.chat-actions{display:flex;gap:7px;margin-left:auto}
+.chat-act-btn{width:34px;height:34px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+/* messages */
+.chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:none}
+.chat-messages::-webkit-scrollbar{display:none}
+.msg-row{display:flex;gap:8px;align-items:flex-end}
+.msg-row.mine{flex-direction:row-reverse}
+.msg-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;font-size:13px;display:flex;align-items:center;justify-content:center}
+.msg-bubble{max-width:72%;padding:10px 13px;border-radius:18px;font-size:12px;line-height:1.55;color:var(--text);background:var(--surface2);border:1px solid var(--border)}
+.msg-row.mine .msg-bubble{background:linear-gradient(135deg,var(--accent),#5fa3ff);color:#fff;border:none;border-bottom-right-radius:6px}
+.msg-row:not(.mine) .msg-bubble{border-bottom-left-radius:6px}
+.msg-time{font-size:9px;color:var(--text3);margin-top:3px;text-align:right}
+.msg-row:not(.mine) .msg-time{text-align:left}
+/* SOS message */
+.sos-msg{background:linear-gradient(135deg,#1a0808,#2a0f0f);border:1px solid #ef444430;border-radius:14px;padding:12px;max-width:85%}
+.sos-msg-title{font-size:12px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.sos-msg-body{font-size:11px;color:#ff9999;line-height:1.5;margin-bottom:8px}
+.sos-msg-loc{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text2);background:var(--surface);border-radius:7px;padding:6px 8px}
+.sos-msg-resp{display:flex;gap:6px;margin-top:8px}
+.sos-resp-btn{flex:1;padding:7px;border-radius:8px;font-size:10px;font-weight:700;border:none;cursor:pointer}
+.sos-resp-ok{background:var(--green);color:#fff}
+.sos-resp-call{background:var(--red);color:#fff}
+/* location share msg */
+.loc-share-msg{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px;max-width:85%}
+.lsm-map{height:80px;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:7px;position:relative;overflow:hidden}
+.lsm-map::before{content:'';position:absolute;inset:0;background-image:linear-gradient(#3d8bff05 1px,transparent 1px),linear-gradient(90deg,#3d8bff05 1px,transparent 1px);background-size:20px 20px}
+.lsm-title{font-size:11px;font-weight:700;color:#fff}
+.lsm-sub{font-size:10px;color:var(--text2)}
+/* chat input */
+.chat-input-bar{padding:10px 14px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:9px;align-items:center;flex-shrink:0}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:100px;padding:10px 16px;font-size:13px;color:var(--text);outline:none;font-family:'DM Sans',sans-serif}
+.chat-input::placeholder{color:var(--text3)}
+.chat-input-btn{width:40px;height:40px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.chat-input-btn:active{transform:scale(.9)}
+.chat-attach-btn{width:36px;height:36px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0}
+
+/* ═══════════════════════════════════════════════════
+   S9 — SAFETY
+═══════════════════════════════════════════════════ */
+.safety-header{padding:18px 18px 12px}
+.safety-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:3px}
+.safety-sub{font-size:12px;color:var(--text2)}
+.sos-main-card{margin:0 16px 14px;background:linear-gradient(135deg,#1a0808,#2a0f0f);border:1px solid #ef444430;border-radius:20px;padding:20px;position:relative;overflow:hidden}
+.sos-card-glow{position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#ef444420,transparent 70%)}
+.sos-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#ff5555;margin-bottom:6px}
+.sos-desc{font-size:12px;color:#ff9999;line-height:1.5;margin-bottom:14px}
+.sos-btn{width:100%;padding:14px;background:#ef4444;border:none;border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.sos-btn:hover{background:#cc2222}
+/* group SOS */
+.group-sos-card{margin:0 16px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:16px}
+.gsc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.gsc-title{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.gsc-desc{font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:12px}
+.gsc-groups{display:flex;gap:8px;flex-wrap:wrap}
+.gsc-group-tag{background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;cursor:pointer;transition:all .2s}
+.gsc-group-tag.sel{border-color:var(--red);color:var(--red);background:#ef444410}
+/* ghost/timer */
+.ghost-card{margin:0 16px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:16px}
+.privacy-tier{margin:0 16px 10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;display:flex;gap:12px;align-items:flex-start}
+.pt-icon{width:40px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.pt-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+.pt-desc{font-size:11px;color:var(--text2);line-height:1.4}
+.pt-count{font-size:10px;color:var(--accent);margin-top:4px;font-weight:600}
+
+/* ═══════════════════════════════════════════════════
+   S10 — EXPLORE
+═══════════════════════════════════════════════════ */
+.exp-header{padding:18px 18px 12px}
+.exp-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:12px}
+.search-bar{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border2);border-radius:13px;padding:11px 14px;margin-bottom:12px}
+.chips-row{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips-row::-webkit-scrollbar{display:none}
+.chip{padding:7px 14px;border-radius:100px;font-size:11px;font-weight:600;border:1px solid var(--border2);color:var(--text2);white-space:nowrap;cursor:pointer;flex-shrink:0;transition:all .2s}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+/* globe */
+.globe-card{margin:12px 16px;height:155px;border-radius:18px;background:#080f1c;position:relative;overflow:hidden;cursor:pointer}
+.globe-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,#3d8bff15,transparent 70%)}
+.globe-label{position:absolute;top:14px;left:14px}
+.globe-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#fff}
+.globe-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.g-dot{position:absolute;width:9px;height:9px;border-radius:50%;animation:blink 2s infinite}
+.globe-count{position:absolute;bottom:14px;right:14px;background:#000000aa;backdrop-filter:blur(8px);border:1px solid var(--accent);border-radius:100px;padding:5px 13px;font-size:11px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:5px}
+/* explore cards */
+.exp-section{padding:0 16px 14px}
+.exp-sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.exp-sec-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff}
+.exp-see-all{font-size:11px;color:var(--accent);font-weight:600;cursor:pointer}
+.exp-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;margin-bottom:9px;cursor:pointer}
+.exp-card-img{width:88px;height:78px;flex-shrink:0;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:30px}
+.exp-card-body{padding:10px 12px;flex:1}
+.exp-card-title{font-size:12px;font-weight:700;color:#fff;margin-bottom:2px}
+.exp-card-meta{font-size:10px;color:var(--text3);margin-bottom:6px}
+.exp-card-tags{display:flex;gap:5px}
+.exp-ct{font-size:9px;padding:2px 7px;border-radius:4px;background:var(--surface3);color:var(--text2)}
+
+/* ═══════════════════════════════════════════════════
+   S11 — PROFILE
+═══════════════════════════════════════════════════ */
+.profile-hero{height:170px;position:relative;overflow:hidden;background:linear-gradient(135deg,#0f1a2e,#1a0f2e)}
+.profile-bg-glow{position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,#3d8bff20,transparent 70%)}
+.profile-av-wrap{position:absolute;bottom:-40px;left:18px}
+.profile-av{width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--pink));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;border:3px solid var(--bg)}
+.profile-badges{position:absolute;bottom:-46px;right:18px;display:flex;gap:6px}
+.badge-icon{width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px}
+.profile-info{padding:50px 18px 14px}
+.profile-name{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:3px}
+.profile-handle{font-size:12px;color:var(--text3);margin-bottom:7px}
+.profile-bio{font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:12px}
+.profile-stats{display:flex;gap:20px;margin-bottom:14px}
+.ps-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;line-height:1}
+.ps-lbl{font-size:10px;color:var(--text3);margin-top:1px}
+.profile-acts{display:flex;gap:8px}
+.pa-btn{flex:1;padding:11px;border-radius:13px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;border:none}
+.pa-edit{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+.pa-share{background:var(--accent);color:#fff}
+.ach-scroll{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none;padding:0 16px 14px}
+.ach-scroll::-webkit-scrollbar{display:none}
+.ach-card{flex-shrink:0;width:78px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:11px 7px;text-align:center;cursor:pointer}
+.ach-icon{font-size:24px;margin-bottom:5px}
+.ach-name{font-size:9px;font-weight:600;color:var(--text2);line-height:1.3}
+.ach-card.earned{border-color:var(--gold);background:#f5c84210}
+.ach-card.earned .ach-name{color:var(--gold)}
+.journey-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 16px 20px}
+.jg-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;overflow:hidden;cursor:pointer}
+.jg-img{height:88px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:30px;position:relative}
+.jg-mode{position:absolute;bottom:5px;left:5px;background:#000000aa;border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;color:#fff}
+.jg-body{padding:9px 10px}
+.jg-title{font-size:11px;font-weight:700;color:#fff;margin-bottom:2px}
+.jg-meta{font-size:9px;color:var(--text3)}
+.profile-tab-row{display:flex;gap:0;margin:0 16px 14px;border-bottom:1px solid var(--border)}
+.profile-tab{flex:1;text-align:center;padding:9px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.profile-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ─── misc utils ─── */
+.divider{height:1px;background:var(--border);margin:6px 0}
+.padded{padding:0 16px}
+.mb8{margin-bottom:8px}
+.mb14{margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Trip<span>Buddy</span> — Ultimate</h1>
+  <p>Live Journey · Companions · Group Chat · SOS · Map · Safety · All Integrated</p>
+</div>
+
+<div class="screen-nav">
+  <button class="screen-btn active" onclick="go('s-splash')">① Splash</button>
+  <button class="screen-btn" onclick="go('s-home')">② Home</button>
+  <button class="screen-btn" onclick="go('s-live')">③ Live Map</button>
+  <button class="screen-btn" onclick="go('s-log')">④ Log Stop</button>
+  <button class="screen-btn" onclick="go('s-timeline')">⑤ Timeline</button>
+  <button class="screen-btn" onclick="go('s-companions')">⑥ Companions</button>
+  <button class="screen-btn" onclick="go('s-messages')">⑦ Messages</button>
+  <button class="screen-btn" onclick="go('s-chat')">⑧ Group Chat</button>
+  <button class="screen-btn" onclick="go('s-safety')">⑨ Safety+SOS</button>
+  <button class="screen-btn" onclick="go('s-explore')">⑩ Explore</button>
+  <button class="screen-btn" onclick="go('s-profile')">⑪ Profile</button>
+</div>
+
+<div class="phone-wrap">
+<div class="phone-shell">
+
+<!-- ═══ S1: SPLASH ═══ -->
+<div class="screen active" id="s-splash">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="splash-hero">
+    <div class="splash-orb1"></div><div class="splash-orb2"></div><div class="splash-orb3"></div>
+    <div class="splash-logo">🗺️</div>
+    <div class="splash-title">Trip<span>Buddy</span></div>
+    <div style="font-size:13px;color:var(--text2);text-align:center;line-height:1.6;max-width:240px;margin-bottom:28px">Your journey is the story. Live-broadcast every road, rail & sky — with your crew.</div>
+    <div class="splash-features">
+      <div class="sf-item"><div class="sf-icon">📡</div><div class="sf-text"><strong>Live Journey Broadcast</strong>Real-time map sharing with your followers</div></div>
+      <div class="sf-item"><div class="sf-icon">👥</div><div class="sf-text"><strong>Find Travel Companions</strong>Discover nearby travelers on the same route</div></div>
+      <div class="sf-item"><div class="sf-icon">💬</div><div class="sf-text"><strong>Group Channels</strong>Chat with your travel group in real-time</div></div>
+      <div class="sf-item"><div class="sf-icon">🆘</div><div class="sf-text"><strong>SOS to Your Group</strong>One tap sends location alert to your group</div></div>
+    </div>
+    <button class="btn-primary" onclick="go('s-home')" style="margin-bottom:10px">Start Your Journey →</button>
+    <button style="width:100%;padding:13px;background:transparent;border:1px solid var(--border2);border-radius:14px;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer">Sign in with Google</button>
+  </div>
+</div>
+
+<!-- ═══ S2: HOME ═══ -->
+<div class="screen" id="s-home">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="home-header">
+      <div><div class="home-greeting">Good Morning</div><div class="home-name">Manish 👋</div></div>
+      <div class="header-right">
+        <div class="notif-btn" onclick="go('s-messages')">🔔<div class="notif-badge"></div></div>
+        <div class="avatar" style="width:40px;height:40px;background:linear-gradient(135deg,var(--orange),var(--pink));font-size:16px;cursor:pointer" onclick="go('s-profile')">M</div>
+      </div>
+    </div>
+    <!-- stories -->
+    <div class="stories-row">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0"><div class="story-add">➕</div><span class="story-name">You</span></div>
+      <div class="story-item" onclick="go('s-live')"><div class="story-ring live-ring"><div class="story-inner">🧗</div></div><span class="story-name live-name">▶ LIVE</span></div>
+      <div class="story-item"><div class="story-ring"><div class="story-inner">🚂</div></div><span class="story-name">Priya</span></div>
+      <div class="story-item"><div class="story-ring"><div class="story-inner">✈️</div></div><span class="story-name">Rohan</span></div>
+      <div class="story-item"><div class="story-ring"><div class="story-inner">🏖️</div></div><span class="story-name">Sneha</span></div>
+    </div>
+    <!-- companion callout -->
+    <div class="companion-callout" onclick="go('s-companions')">
+      <div class="cc-icon">👥</div>
+      <div class="cc-text"><strong>3 Travelers Nearby · Surat</strong><span>@priya, @rohan, @arjun heading your way</span></div>
+      <div class="cc-badge">New</div>
+    </div>
+    <!-- journey card live -->
+    <div class="jcard">
+      <div class="jcard-map map-bg" style="height:150px">
+        <div class="map-grid"></div><div class="map-dots"></div>
+        <div style="position:absolute;top:50%;left:8%;right:28%;height:3px;background:repeating-linear-gradient(90deg,var(--gold) 0,var(--gold) 10px,transparent 10px,transparent 18px);transform:translateY(-50%);border-radius:2px;filter:drop-shadow(0 0 5px var(--gold))"></div>
+        <div style="position:absolute;top:50%;left:8%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:var(--orange);border:2px solid var(--bg);box-shadow:0 0 10px var(--orange)"></div>
+        <div style="position:absolute;top:36%;right:24%;transform:translateY(-50%)"><div style="width:16px;height:16px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 16px var(--red);animation:pin-pulse 2s infinite"></div></div>
+        <div class="jcard-overlay">
+          <span class="pill pill-live">Live</span>
+          <div style="display:flex;gap:5px"><div style="width:26px;height:26px;border-radius:7px;background:#000000aa;backdrop-filter:blur(8px);border:1px solid #ffffff15;display:flex;align-items:center;justify-content:center;font-size:13px">🚂</div><div style="width:26px;height:26px;border-radius:7px;background:#000000aa;backdrop-filter:blur(8px);border:1px solid #ffffff15;display:flex;align-items:center;justify-content:center;font-size:13px">🥾</div></div>
+        </div>
+      </div>
+      <div class="jcard-body">
+        <div class="jcard-user">
+          <div class="avatar" style="width:32px;height:32px;background:linear-gradient(135deg,var(--orange),#ff9f7f);font-size:13px">P</div>
+          <div><div class="jcard-username">Priya Sharma</div><div class="jcard-time">4h ago · 12 watching</div></div>
+        </div>
+        <div class="jcard-title">Mumbai → Goa Express 🌊</div>
+        <div class="jcard-caption">Crossing the Konkan coast — the kind of view that makes you put your phone down 🌅</div>
+        <div class="jcard-reactions">
+          <div class="react-btn">🔥 <span class="react-count">48</span></div>
+          <div class="react-btn">😍 <span class="react-count">31</span></div>
+          <div class="react-btn" onclick="go('s-chat')">💬 <span class="react-count">9</span></div>
+        </div>
+        <div class="jcard-stats">
+          <div class="jcard-stat">📍 <strong>3 stops</strong></div>
+          <div class="jcard-stat">⏱ <strong>4h 12m</strong></div>
+          <div class="jcard-stat">⛅ <strong>29°C</strong></div>
+        </div>
+      </div>
+    </div>
+    <!-- journey card 2 -->
+    <div class="jcard">
+      <div class="jcard-map map-bg" style="height:120px">
+        <div class="map-grid"></div><div class="map-dots"></div>
+        <div style="position:absolute;top:50%;left:8%;right:12%;height:2px;border-top:2.5px dashed var(--accent);transform:translateY(-50%)"></div>
+        <div style="position:absolute;top:50%;left:8%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--orange);border:2px solid var(--bg)"></div>
+        <div style="position:absolute;top:50%;right:12%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--bg);box-shadow:0 0 8px var(--green)"></div>
+        <div class="jcard-overlay">
+          <span style="background:#22d47a20;color:var(--green);border:1px solid #22d47a30;padding:3px 9px;border-radius:100px;font-size:9px;font-weight:700">✓ Done</span>
+          <span style="background:#000000aa;border:1px solid #ffffff15;padding:3px 9px;border-radius:100px;font-size:10px;font-weight:700;color:#fff">2,480 km</span>
+        </div>
+      </div>
+      <div class="jcard-body">
+        <div class="jcard-user">
+          <div class="avatar" style="width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--green));font-size:13px">R</div>
+          <div><div class="jcard-username">Rohan Mehra</div><div class="jcard-time">2 days ago · 1.2k views</div></div>
+        </div>
+        <div class="jcard-title">Surat → Leh · 8-Day Epic 🏔️</div>
+        <div class="jcard-caption">Delhi to Leh by air, then Leh to Manali by road. The whole roof of India in one frame.</div>
+        <div class="jcard-reactions">
+          <div class="react-btn">🔥 <span class="react-count">284</span></div>
+          <div class="react-btn">🤩 <span class="react-count">157</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="go('s-home')"><div class="nav-icon">🏠</div><div class="nav-label">Home</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-explore')"><div class="nav-icon">🔭</div><div class="nav-label">Explore</div><div class="nav-dot"></div></div>
+    <div class="nav-fab" onclick="go('s-log')">➕</div>
+    <div class="nav-item" onclick="go('s-messages')"><div class="nav-icon">💬</div><div class="nav-label">Chats</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div><div class="nav-dot"></div></div>
+  </div>
+</div>
+
+<!-- ═══ S3: LIVE MAP ═══ -->
+<div class="screen" id="s-live">
+  <div class="status-bar" style="position:absolute;top:0;left:0;right:0;z-index:50;background:transparent"><span class="status-time" style="color:#fff">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div style="flex:1;position:relative;">
+    <div class="live-map-full">
+      <div class="live-map-grid"></div><div class="live-map-dots"></div>
+      <!-- terrain blobs -->
+      <div style="position:absolute;top:20%;left:5%;width:80px;height:60px;background:radial-gradient(ellipse,#3d8bff08,transparent);border-radius:50%"></div>
+      <div style="position:absolute;bottom:35%;right:10%;width:120px;height:80px;background:radial-gradient(ellipse,#22d47a08,transparent);border-radius:50%"></div>
+      <!-- route -->
+      <div class="live-route-line"></div>
+      <!-- stops -->
+      <div class="live-stop-mk" style="top:42%;left:8%;transform:translateY(-50%)"><div class="lsm-dot" style="background:var(--orange);box-shadow:0 0 10px var(--orange)"></div><div class="lsm-label">Surat</div></div>
+      <div class="live-stop-mk" style="top:42%;left:38%;transform:translateY(-50%)"><div class="lsm-dot" style="background:var(--gold);box-shadow:0 0 8px var(--gold);width:10px;height:10px;border-radius:50%;border:2px solid var(--bg)"></div></div>
+      <!-- live pin -->
+      <div class="live-pin-wrap"><div class="live-pin-ring"></div><div class="live-pin-core"></div></div>
+      <!-- group travelers on map -->
+      <div style="position:absolute;top:38%;left:55%;transform:translateY(-50%);z-index:4">
+        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 0 10px var(--accent)">P</div>
+        <div style="position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--accent);border-radius:5px;padding:2px 6px;font-size:8px;font-weight:700;color:var(--accent);white-space:nowrap">@priya</div>
+      </div>
+      <div style="position:absolute;top:48%;left:62%;transform:translateY(-50%);z-index:4">
+        <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--sky));border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px">R</div>
+      </div>
+    </div>
+    <!-- top bar -->
+    <div class="live-topbar">
+      <div>
+        <button class="back-btn" onclick="go('s-home')" style="background:#000000bb;border:1px solid #ffffff18;color:var(--text);font-size:14px;font-weight:600;padding:7px 14px;border-radius:100px;cursor:pointer;backdrop-filter:blur(10px)">← Back</button>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="live-journey-name">Surat → Mumbai</div>
+        <div class="live-sub-info"><span class="pill pill-live" style="font-size:9px;padding:3px 7px">Live</span>847 km · 12 watching</div>
+      </div>
+      <div class="live-ctrl-btns">
+        <div class="live-ctrl-btn" onclick="go('s-safety')" title="SOS">🆘</div>
+        <div class="live-ctrl-btn" onclick="go('s-chat')" title="Group Chat">💬</div>
+        <div class="live-ctrl-btn" title="Ghost">👻</div>
+      </div>
+    </div>
+    <!-- SOS float -->
+    <div class="sos-float" onclick="sosAlert()">
+      <div class="sos-float-btn"><span>🆘</span><span>SOS</span></div>
+    </div>
+    <!-- group watch -->
+    <div class="group-watch-pill" onclick="go('s-companions')">
+      <div class="gwp-avatars">
+        <div class="gwp-av">P</div><div class="gwp-av">R</div><div class="gwp-av">S</div>
+      </div>
+      <span class="gwp-text">3 in group</span>
+    </div>
+    <!-- bottom sheet -->
+    <div class="live-sheet">
+      <div class="sheet-handle"></div>
+      <div class="curr-stop-card">
+        <div class="csc-icon">🚂</div>
+        <div>
+          <div class="csc-title">Rajdhani Express #12951</div>
+          <div class="csc-desc">Between Surat & Vadodara · Coach B2 Berth 43</div>
+          <div class="csc-eta">🕐 Vadodara ETA: 47 min · Platform 3</div>
+        </div>
+      </div>
+      <div class="live-qa">
+        <div class="qa-btn" onclick="go('s-chat')">💬 Group Chat</div>
+        <div class="qa-btn" onclick="go('s-companions')">👥 Find Crew</div>
+        <div class="qa-btn">🍱 Order Food</div>
+        <div class="qa-btn">📋 PNR Check</div>
+        <div class="qa-btn">🗺️ Offline Map</div>
+      </div>
+      <div class="live-log-btn" onclick="go('s-log')">📍 Log This Moment</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S4: LOG STOP ═══ -->
+<div class="screen" id="s-log">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="log-header"><div class="back-btn" onclick="go('s-live')">←</div><div class="log-title">Log a Stop</div></div>
+    <div class="photo-area">
+      <div class="photo-thumbs">
+        <div class="photo-thumb">🌅</div><div class="photo-thumb">🚂</div><div class="photo-add-cell">+</div>
+      </div>
+    </div>
+    <div class="form-sec">
+      <div class="form-lbl">Caption</div>
+      <textarea class="form-input" rows="3" placeholder="What's happening here? 🌟" style="height:70px"></textarea>
+      <div class="form-lbl">Transport Mode</div>
+      <div class="transport-grid">
+        <div class="tp sel">🚂 Train</div><div class="tp">✈️ Flight</div><div class="tp">🥾 Walk</div>
+        <div class="tp">🚗 Drive</div><div class="tp">🚌 Bus</div><div class="tp">⛵ Boat</div>
+      </div>
+      <div class="form-lbl">Location</div>
+      <div class="loc-pill">
+        <span style="font-size:18px">📍</span>
+        <div><div class="loc-name">Surat Railway Station</div><div class="loc-coords">21.2060°N 72.8313°E</div></div>
+        <div class="loc-ok">GPS</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:14px">
+        <span style="font-size:16px">⛅</span>
+        <div style="flex:1"><div style="font-size:12px;font-weight:600;color:#fff">Sunny · 31°C</div><div style="font-size:9px;color:var(--text3)">Auto-tagged weather</div></div>
+        <span style="font-size:9px;color:var(--green);font-weight:700">✓ Auto</span>
+      </div>
+      <div class="form-lbl">Share With</div>
+      <div class="privacy-row">
+        <div class="prv-opt"><span class="prv-icon">👥</span><div><div class="prv-title">Group</div><div class="prv-sub">Mumbai Express crew</div></div></div>
+        <div class="prv-opt" style="border-color:var(--accent)"><span class="prv-icon">🌐</span><div><div class="prv-title">Public</div><div class="prv-sub">All followers</div></div></div>
+      </div>
+      <!-- share to group option -->
+      <div style="background:linear-gradient(135deg,#0f1a2e,#1a0f1e);border:1px solid var(--accent);border-radius:12px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">📡</span>
+        <div style="flex:1"><div style="font-size:12px;font-weight:700;color:#fff">Auto-share to Group Chat</div><div style="font-size:10px;color:var(--text2)">Mumbai Express · 6 members will be notified</div></div>
+        <div class="toggle on"><div class="toggle-knob"></div></div>
+      </div>
+      <button class="btn-primary" onclick="go('s-timeline')" style="margin-bottom:20px">Post Stop 📍</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S5: TIMELINE ═══ -->
+<div class="screen" id="s-timeline">
+  <div class="status-bar" style="position:absolute;top:0;left:0;right:0;z-index:30"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="tl-hero">
+      <div class="tl-hero-bg map-bg">
+        <div class="map-grid"></div><div class="map-dots"></div>
+        <div style="position:absolute;top:50%;left:6%;right:6%;height:3px;background:repeating-linear-gradient(90deg,var(--gold) 0,var(--gold) 10px,transparent 10px,transparent 18px);transform:translateY(-50%);border-radius:2px;filter:drop-shadow(0 0 5px var(--gold))"></div>
+        <div style="position:absolute;top:50%;left:6%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:var(--orange);border:2px solid var(--bg);box-shadow:0 0 10px var(--orange)"></div>
+        <div style="position:absolute;top:50%;right:6%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--bg);box-shadow:0 0 10px var(--green);animation:pin-pulse 2s infinite"></div>
+      </div>
+      <div class="tl-hero-overlay"></div>
+      <div class="tl-hero-topbar">
+        <span style="font-size:22px;cursor:pointer;color:#fff" onclick="go('s-home')">←</span>
+        <div style="display:flex;gap:8px">
+          <div style="background:#000000aa;border:1px solid #ffffff15;border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600;color:#fff;cursor:pointer" onclick="go('s-chat')">💬 Group</div>
+          <div style="background:#000000aa;border:1px solid #ffffff15;border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600;color:#fff;cursor:pointer">📤 Share</div>
+        </div>
+      </div>
+    </div>
+    <div class="tl-meta">
+      <div class="tl-journey-title">Mumbai → Goa Express 🌊</div>
+      <div class="tl-author">
+        <div class="avatar" style="width:26px;height:26px;background:linear-gradient(135deg,var(--orange),var(--pink));font-size:11px">P</div>
+        <span class="tl-author-name">Priya Sharma · @priya.travels</span>
+        <span class="tl-watchers">👁 847 live</span>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="sr-stat"><div class="sr-val">847</div><div class="sr-lbl">km</div></div>
+      <div class="sr-stat"><div class="sr-val">4h</div><div class="sr-lbl">elapsed</div></div>
+      <div class="sr-stat"><div class="sr-val">3</div><div class="sr-lbl">stops</div></div>
+      <div class="sr-stat"><div class="sr-val" style="color:var(--orange)">Live</div><div class="sr-lbl">status</div></div>
+    </div>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot" style="background:var(--orange);box-shadow:0 0 6px var(--orange)"></div><div class="tl-line"></div></div>
+        <div class="tl-right">
+          <div class="tl-stop-card">
+            <div class="tl-stop-img">🚉<span class="tl-stop-img-lbl">Mumbai CST</span></div>
+            <div class="tl-stop-body">
+              <div class="tl-stop-name">Journey Begins at CST</div>
+              <div class="tl-stop-desc">Platform 5 energy. The Konkan Kanya is finally here!</div>
+              <div class="tl-stop-tags"><span class="tl-tag">🕐 8:00 AM</span><span class="tl-tag">⛅ 28°C</span><span class="tl-tag">🚂 Train</span></div>
+              <div class="tl-reactions"><div class="tl-react">🔥<span>48</span></div><div class="tl-react">😍<span>31</span></div><div class="tl-react">💬<span>9</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="seg-conn">
+        <div class="seg-left"><div class="seg-line"></div><div class="seg-line"></div></div>
+        <div class="seg-right"><span class="seg-pill pill-train">🚂 Train · 240 km · 3h</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold)"></div><div class="tl-line"></div></div>
+        <div class="tl-right">
+          <div class="tl-stop-card">
+            <div class="tl-stop-img" style="font-size:40px">🌊</div>
+            <div class="tl-stop-body">
+              <div class="tl-stop-name">Konkan Coastline 🌴</div>
+              <div class="tl-stop-desc">The train hugged the coast for 10 minutes. Not a word needed.</div>
+              <div class="tl-stop-tags"><span class="tl-tag">🕐 11:30 AM</span><span class="tl-tag">☀️ 32°C</span></div>
+              <div class="tl-reactions"><div class="tl-react">🔥<span>112</span></div><div class="tl-react">🤩<span>87</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="seg-conn">
+        <div class="seg-left"><div class="seg-line"></div><div class="seg-line"></div></div>
+        <div class="seg-right"><span class="seg-pill pill-walk">🥾 Walk · 1.2 km · 18 min</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-left"><div class="tl-dot" style="background:var(--red);animation:pin-pulse 2s infinite;width:14px;height:14px"></div></div>
+        <div class="tl-right">
+          <div class="tl-stop-card" style="border-color:#ef444430">
+            <div class="tl-stop-body">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><span class="pill pill-live" style="font-size:9px;padding:3px 7px">Now</span></div>
+              <div class="tl-stop-name">Crossing Panvel Bridge</div>
+              <div class="tl-stop-desc">Posted 2 min ago · Group is reacting live 🔥</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S6: COMPANIONS ═══ -->
+<div class="screen" id="s-companions">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="comp-header">
+      <div class="comp-title">Companions 👥</div>
+      <div class="comp-sub">Find travelers on your route · Create or join groups</div>
+    </div>
+    <!-- nearby mini-map -->
+    <div class="nearby-map" onclick="go('s-live')">
+      <div class="map-grid"></div><div class="map-dots"></div>
+      <!-- you -->
+      <div class="nm-ping" style="top:50%;left:50%"><div style="width:16px;height:16px;border-radius:50%;background:var(--orange);border:2.5px solid #fff;box-shadow:0 0 14px var(--orange)"></div><div class="nm-ping-ring" style="border-color:var(--orange)"></div><div class="nm-label" style="color:var(--orange)">You</div></div>
+      <!-- others -->
+      <div class="nm-ping" style="top:38%;left:62%"><div class="nm-ping-core" style="background:var(--accent)"></div><div class="nm-ping-ring" style="border-color:var(--accent)"></div><div class="nm-label">@priya · 1.2km</div></div>
+      <div class="nm-ping" style="top:60%;left:35%"><div class="nm-ping-core" style="background:var(--green)"></div><div class="nm-ping-ring" style="border-color:var(--green)"></div><div class="nm-label">@rohan · 0.8km</div></div>
+      <div class="nm-ping" style="top:45%;left:72%"><div class="nm-ping-core" style="background:var(--gold)"></div><div class="nm-ping-ring" style="border-color:var(--gold)"></div></div>
+      <div class="nm-count-badge">🎯 3 travelers nearby</div>
+    </div>
+    <!-- section label -->
+    <div style="padding:0 16px;margin-bottom:10px"><div class="section-lbl">Nearby on your route</div></div>
+    <!-- traveler 1 -->
+    <div class="traveler-card">
+      <div class="tc-avatar avatar" style="background:linear-gradient(135deg,var(--accent),var(--purple));font-size:18px">P<div class="tc-online"></div></div>
+      <div style="flex:1;min-width:0">
+        <div class="tc-name">Priya Sharma</div>
+        <div class="tc-dest">→ Goa · Same train · Coach B3</div>
+        <div class="tc-tags"><span class="tc-tag">🚂 Same train</span><span class="tc-tag">📍 1.2 km</span><span class="tc-tag">⭐ 4.8</span></div>
+      </div>
+      <div class="tc-actions">
+        <div class="tc-btn tc-btn-msg" onclick="go('s-chat')">💬</div>
+        <div class="tc-btn tc-btn-add">➕</div>
+      </div>
+    </div>
+    <div class="traveler-card">
+      <div class="tc-avatar avatar" style="background:linear-gradient(135deg,var(--green),var(--sky));font-size:18px">R<div class="tc-online"></div></div>
+      <div style="flex:1;min-width:0">
+        <div class="tc-name">Rohan Mehra</div>
+        <div class="tc-dest">→ Mumbai · Bus from Pune</div>
+        <div class="tc-tags"><span class="tc-tag">🚌 Same route</span><span class="tc-tag">📍 0.8 km</span></div>
+      </div>
+      <div class="tc-actions">
+        <div class="tc-btn tc-btn-msg" onclick="go('s-chat')">💬</div>
+        <div class="tc-btn tc-btn-add">➕</div>
+      </div>
+    </div>
+    <div class="traveler-card">
+      <div class="tc-avatar avatar" style="background:linear-gradient(135deg,var(--gold),var(--orange));font-size:18px">A</div>
+      <div style="flex:1;min-width:0">
+        <div class="tc-name">Arjun Kapoor</div>
+        <div class="tc-dest">→ Goa · Solo traveler</div>
+        <div class="tc-tags"><span class="tc-tag">✈️ Flight later</span><span class="tc-tag">📍 2.1 km</span></div>
+      </div>
+      <div class="tc-actions">
+        <div class="tc-btn tc-btn-msg" onclick="go('s-chat')">💬</div>
+        <div class="tc-btn tc-btn-add">➕</div>
+      </div>
+    </div>
+
+    <!-- groups section -->
+    <div style="padding:14px 16px 8px"><div class="section-lbl">Travel Groups · Join or Create</div></div>
+    <!-- active group -->
+    <div class="group-card" onclick="go('s-chat')">
+      <div class="gc-header">
+        <div class="gc-icon" style="background:#f5c84220;border:1px solid #f5c84230">🚂</div>
+        <div>
+          <div class="gc-name">Mumbai Express Crew</div>
+          <div class="gc-meta">Mumbai → Goa · 6 members · Live now</div>
+        </div>
+        <span class="pill pill-live" style="margin-left:auto;font-size:9px;padding:3px 7px">Live</span>
+      </div>
+      <div class="gc-members">
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--orange),var(--pink))">M</div>
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--accent),var(--purple))">P</div>
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--green),var(--sky))">R</div>
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--gold),var(--orange))">A</div>
+        <div class="gc-more">+2</div>
+      </div>
+      <div class="gc-actions">
+        <div class="gc-btn gc-btn-msg" onclick="go('s-chat')">💬 Open Chat</div>
+        <div class="gc-btn gc-btn-join" style="background:var(--orange)">📡 Track Group</div>
+      </div>
+    </div>
+    <!-- open group -->
+    <div class="group-card">
+      <div class="gc-header">
+        <div class="gc-icon" style="background:#3d8bff20;border:1px solid #3d8bff30">🏖️</div>
+        <div>
+          <div class="gc-name">Goa Weekend Warriors</div>
+          <div class="gc-meta">Various routes → Goa · 23 members · Open</div>
+        </div>
+      </div>
+      <div class="gc-members">
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--pink),var(--purple))">S</div>
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--sky),var(--green))">D</div>
+        <div class="gc-mem-av" style="background:linear-gradient(135deg,var(--gold),var(--orange))">K</div>
+        <div class="gc-more">+20</div>
+      </div>
+      <div class="gc-actions">
+        <div class="gc-btn gc-btn-msg">View Chat</div>
+        <div class="gc-btn gc-btn-join">Join Group</div>
+      </div>
+    </div>
+    <!-- create group -->
+    <div class="create-group-btn" onclick="createGroup()">
+      <span style="font-size:20px">➕</span>
+      Create a New Travel Group
+    </div>
+    <div style="height:16px"></div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="go('s-home')"><div class="nav-icon">🏠</div><div class="nav-label">Home</div><div class="nav-dot"></div></div>
+    <div class="nav-item active" onclick="go('s-companions')"><div class="nav-icon">👥</div><div class="nav-label">Crew</div><div class="nav-dot"></div></div>
+    <div class="nav-fab" onclick="go('s-log')">➕</div>
+    <div class="nav-item" onclick="go('s-messages')"><div class="nav-icon">💬</div><div class="nav-label">Chats</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div><div class="nav-dot"></div></div>
+  </div>
+</div>
+
+<!-- ═══ S7: MESSAGES ═══ -->
+<div class="screen" id="s-messages">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="msg-header">
+      <div class="msg-title">Messages 💬</div>
+      <div class="notif-btn" style="width:36px;height:36px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;margin-left:auto" onclick="go('s-companions')">✏️</div>
+    </div>
+    <div class="msg-search"><span class="msg-search-icon">🔍</span><span class="msg-search-ph">Search chats…</span></div>
+    <!-- SOS alert thread -->
+    <div style="background:#1a0808;border-left:3px solid var(--red);padding:10px 16px;display:flex;gap:10px;align-items:center;cursor:pointer" onclick="go('s-chat')">
+      <div style="font-size:22px">🆘</div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--red)">SOS Alert from @priya</div>
+        <div style="font-size:10px;color:#ff9999;margin-top:2px">I'm at Dadar station, feel unsafe. Please check.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div style="font-size:9px;color:var(--text3)">2m ago</div><span class="thread-sos">SOS</span></div>
+    </div>
+    <div class="msg-divider"></div>
+    <!-- group thread -->
+    <div class="msg-thread" onclick="go('s-chat')">
+      <div class="thread-av avatar" style="background:linear-gradient(135deg,var(--orange),var(--gold));font-size:20px">🚂<div class="thread-av-group">6</div></div>
+      <div class="thread-info">
+        <div class="thread-name">Mumbai Express Crew</div>
+        <div class="thread-last">Priya: Just crossed Panvel bridge!! 🌊🔥</div>
+      </div>
+      <div class="thread-meta"><div class="thread-time">3m</div><div class="thread-unread">5</div></div>
+    </div>
+    <div class="msg-thread" onclick="go('s-chat')">
+      <div class="thread-av avatar" style="background:linear-gradient(135deg,var(--accent),var(--purple));font-size:18px">P<div class="thread-av-online"></div></div>
+      <div class="thread-info">
+        <div class="thread-name">Priya Sharma</div>
+        <div class="thread-last">📍 Location shared · Dadar Station</div>
+      </div>
+      <div class="thread-meta"><div class="thread-time">7m</div><div class="thread-unread">2</div></div>
+    </div>
+    <div class="msg-thread">
+      <div class="thread-av avatar" style="background:linear-gradient(135deg,var(--green),var(--sky));font-size:18px">R<div class="thread-av-online"></div></div>
+      <div class="thread-info">
+        <div class="thread-name">Rohan Mehra</div>
+        <div class="thread-last">You: Sounds good, see you at the station!</div>
+      </div>
+      <div class="thread-meta"><div class="thread-time">1h</div></div>
+    </div>
+    <div class="msg-divider"></div>
+    <div style="padding:8px 16px 6px"><div class="section-lbl">Group Channels</div></div>
+    <div class="msg-thread" onclick="go('s-chat')">
+      <div class="thread-av avatar" style="background:linear-gradient(135deg,var(--accent),var(--green));font-size:20px">🏖️<div class="thread-av-group">23</div></div>
+      <div class="thread-info">
+        <div class="thread-name">Goa Weekend Warriors</div>
+        <div class="thread-last">Arjun: Anyone at Dadar yet?</div>
+      </div>
+      <div class="thread-meta"><div class="thread-time">15m</div></div>
+    </div>
+    <div class="msg-thread">
+      <div class="thread-av avatar" style="background:linear-gradient(135deg,var(--purple),var(--pink));font-size:20px">🏔️<div class="thread-av-group">8</div></div>
+      <div class="thread-info">
+        <div class="thread-name">Leh Riders Club</div>
+        <div class="thread-last">Admin: Manali road is open! Clear weather.</div>
+      </div>
+      <div class="thread-meta"><div class="thread-time">2h</div></div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="go('s-home')"><div class="nav-icon">🏠</div><div class="nav-label">Home</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-companions')"><div class="nav-icon">👥</div><div class="nav-label">Crew</div><div class="nav-dot"></div></div>
+    <div class="nav-fab" onclick="go('s-log')">➕</div>
+    <div class="nav-item active" onclick="go('s-messages')"><div class="nav-icon">💬</div><div class="nav-label">Chats</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div><div class="nav-dot"></div></div>
+  </div>
+</div>
+
+<!-- ═══ S8: GROUP CHAT ═══ -->
+<div class="screen" id="s-chat">
+  <div class="chat-topbar">
+    <span class="chat-back" onclick="go('s-messages')">←</span>
+    <div class="avatar chat-av" style="background:linear-gradient(135deg,var(--orange),var(--gold));font-size:18px">🚂</div>
+    <div>
+      <div class="chat-name">Mumbai Express Crew</div>
+      <div class="chat-status">6 members · 4 online</div>
+    </div>
+    <div class="chat-actions">
+      <div class="chat-act-btn" onclick="go('s-live')" title="View live map">🗺️</div>
+      <div class="chat-act-btn" onclick="go('s-companions')" title="Members">👥</div>
+      <div class="chat-act-btn" onclick="sosAlert()" title="SOS to group" style="background:#ef444415;border-color:#ef444430;color:var(--red)">🆘</div>
+    </div>
+  </div>
+  <div class="chat-messages" id="chat-msgs">
+    <!-- system message -->
+    <div style="text-align:center;font-size:10px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:5px 12px;margin:0 auto;max-width:80%">📍 Journey started · Mumbai → Goa</div>
+    <!-- priya -->
+    <div class="msg-row">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--accent),var(--purple));font-size:12px">P</div>
+      <div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px;padding-left:2px">Priya</div>
+        <div class="msg-bubble">Hey everyone! Just boarded at CST 🚂 Platform 5. Who else is on Konkan Kanya?</div>
+        <div class="msg-time">8:02 AM</div>
+      </div>
+    </div>
+    <!-- rohan -->
+    <div class="msg-row">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--green),var(--sky));font-size:12px">R</div>
+      <div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px;padding-left:2px">Rohan</div>
+        <div class="msg-bubble">I'm on! Coach B2. Should we meet at the pantry car?</div>
+        <div class="msg-time">8:05 AM</div>
+      </div>
+    </div>
+    <!-- location share -->
+    <div class="msg-row">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--green),var(--sky));font-size:12px">R</div>
+      <div>
+        <div class="loc-share-msg">
+          <div class="lsm-map"><div style="position:relative;z-index:1;text-align:center"><div style="font-size:24px">📍</div><div style="font-size:9px;font-weight:700;color:var(--text)">My Location</div></div></div>
+          <div class="lsm-title">Rohan shared live location</div>
+          <div class="lsm-sub" style="margin-top:2px">CST Station · Coach B2 · Active for 1h</div>
+        </div>
+        <div class="msg-time">8:05 AM</div>
+      </div>
+    </div>
+    <!-- mine -->
+    <div class="msg-row mine">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--orange),var(--pink));font-size:12px">M</div>
+      <div>
+        <div class="msg-bubble">Coming! I'm in B3. Ordered chai 🍵 Want anything from the pantry?</div>
+        <div class="msg-time">8:07 AM</div>
+      </div>
+    </div>
+    <!-- SOS message -->
+    <div class="msg-row">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--accent),var(--purple));font-size:12px">P</div>
+      <div>
+        <div style="font-size:9px;color:var(--red);margin-bottom:3px;padding-left:2px;font-weight:700">⚠️ Priya · SOS Alert</div>
+        <div class="sos-msg">
+          <div class="sos-msg-title">🆘 SOS — Priya needs help</div>
+          <div class="sos-msg-body">I'm at Dadar station and feeling unsafe. The crowd is very dense and I can't find my way to the platform. Please someone come!</div>
+          <div class="sos-msg-loc">📍 Dadar Railway Station<br>19.0178° N, 72.8478° E<br>Platform 3 · 8 min ago</div>
+          <div class="sos-msg-resp">
+            <button class="sos-resp-btn sos-resp-ok" onclick="respondSOS()">✓ On My Way</button>
+            <button class="sos-resp-btn sos-resp-call">📞 Call</button>
+          </div>
+        </div>
+        <div class="msg-time">11:42 AM</div>
+      </div>
+    </div>
+    <!-- response to SOS -->
+    <div class="msg-row mine">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--orange),var(--pink));font-size:12px">M</div>
+      <div>
+        <div class="msg-bubble" style="background:linear-gradient(135deg,#22d47a,#10b981)">I'm 2 mins away! Coming to Platform 3 now 🏃</div>
+        <div class="msg-time">11:43 AM</div>
+      </div>
+    </div>
+    <!-- latest -->
+    <div class="msg-row">
+      <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--accent),var(--purple));font-size:12px">P</div>
+      <div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px;padding-left:2px">Priya</div>
+        <div class="msg-bubble">Just crossed Panvel bridge!! 🌊🔥 The view is INSANE right now</div>
+        <div class="msg-time">12:05 PM</div>
+      </div>
+    </div>
+  </div>
+  <div class="chat-input-bar">
+    <div class="chat-attach-btn" onclick="showAttachMenu()">📎</div>
+    <input class="chat-input" placeholder="Message group…" id="chat-input-field" onkeydown="handleChatKey(event)">
+    <div class="chat-input-btn" onclick="sendChatMsg()">↑</div>
+  </div>
+</div>
+
+<!-- ═══ S9: SAFETY ═══ -->
+<div class="screen" id="s-safety">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="safety-header">
+      <div class="safety-title">Safety Hub 🛡️</div>
+      <div class="safety-sub">Privacy, SOS & emergency controls</div>
+    </div>
+    <!-- SOS main -->
+    <div class="sos-main-card">
+      <div class="sos-card-glow"></div>
+      <div class="sos-title">🆘 Emergency SOS</div>
+      <div class="sos-desc">3-second hold sends your exact GPS to all trusted contacts + auto-alerts your travel group. Works offline.</div>
+      <button class="sos-btn" onclick="sosAlert()">🆘 Send SOS Alert Now</button>
+    </div>
+    <!-- SOS to group -->
+    <div class="group-sos-card">
+      <div class="gsc-header">
+        <div class="gsc-title">📡 SOS to Travel Group</div>
+        <div class="toggle on"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="gsc-desc">When you trigger SOS, your live location is instantly broadcast to all members of your selected travel groups. They can respond, call you, or call emergency services on your behalf.</div>
+      <div class="gsc-groups">
+        <div class="gsc-group-tag sel">🚂 Mumbai Express Crew</div>
+        <div class="gsc-group-tag sel">🏖️ Goa Warriors</div>
+        <div class="gsc-group-tag">+ Add Group</div>
+      </div>
+    </div>
+    <!-- check-in timer -->
+    <div class="ghost-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:700;color:#fff">⏰ Check-in Timer</div>
+        <div class="toggle on"><div class="toggle-knob"></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:11px">If you don't check in within the set time, your group gets an automatic SOS alert.</div>
+      <div style="display:flex;gap:7px">
+        <div style="flex:1;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:9px;text-align:center;cursor:pointer"><div style="font-size:17px;font-weight:800;color:var(--accent);font-family:'Syne',sans-serif">2h</div><div style="font-size:9px;color:var(--text3)">Active</div></div>
+        <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px;text-align:center;cursor:pointer"><div style="font-size:15px;color:var(--text2)">4h</div><div style="font-size:9px;color:var(--text3)">Set</div></div>
+        <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px;text-align:center;cursor:pointer"><div style="font-size:15px;color:var(--text2)">8h</div><div style="font-size:9px;color:var(--text3)">Set</div></div>
+      </div>
+    </div>
+    <!-- ghost mode -->
+    <div class="ghost-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px">👻 Ghost Mode</div>
+        <div class="toggle" id="ghostTgl" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">Freezes your public location broadcast instantly. Your group still sees you, but public followers don't. Your timeline records offline.</div>
+    </div>
+    <!-- delayed broadcast -->
+    <div class="ghost-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:14px;font-weight:700;color:#fff">🕐 2h Delay Broadcast</div>
+        <div class="toggle on"><div class="toggle-knob"></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">Public feed sees your Stops 2 hours after you post. You're already gone before anyone knows you were there.</div>
+    </div>
+    <!-- privacy tiers -->
+    <div style="padding:4px 16px 8px"><div class="section-lbl">Trusted Contacts</div></div>
+    <div class="privacy-tier">
+      <div class="pt-icon" style="background:#ef444415;border:1px solid #ef444425">🔴</div>
+      <div><div class="pt-title">Tier 1 · Family</div><div class="pt-desc">Real-time GPS + SOS alerts + all notifications</div><div class="pt-count">3 → Mum, Dad, Sister</div></div>
+    </div>
+    <div class="privacy-tier">
+      <div class="pt-icon" style="background:#f5c84215;border:1px solid #f5c84225">🟡</div>
+      <div><div class="pt-title">Tier 2 · Travel Groups</div><div class="pt-desc">Live journey + SOS alerts sent to your groups</div><div class="pt-count">2 groups · 8 members</div></div>
+    </div>
+    <div class="privacy-tier">
+      <div class="pt-icon" style="background:#3d8bff15;border:1px solid #3d8bff25">🔵</div>
+      <div><div class="pt-title">Tier 3 · Followers</div><div class="pt-desc">Public timeline, no live GPS</div><div class="pt-count">247 followers</div></div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="go('s-home')"><div class="nav-icon">🏠</div><div class="nav-label">Home</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-companions')"><div class="nav-icon">👥</div><div class="nav-label">Crew</div><div class="nav-dot"></div></div>
+    <div class="nav-fab" onclick="go('s-log')">➕</div>
+    <div class="nav-item active" onclick="go('s-safety')"><div class="nav-icon">🛡️</div><div class="nav-label">Safety</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div><div class="nav-dot"></div></div>
+  </div>
+</div>
+
+<!-- ═══ S10: EXPLORE ═══ -->
+<div class="screen" id="s-explore">
+  <div class="status-bar"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="exp-header">
+      <div class="exp-title">Explore 🔭</div>
+      <div class="search-bar"><span style="font-size:15px">🔍</span><span style="font-size:13px;color:var(--text3)">Journeys, routes, travelers…</span></div>
+      <div class="chips-row">
+        <div class="chip active">All</div><div class="chip">🚂 Train</div><div class="chip">✈️ Flight</div><div class="chip">🥾 Trek</div><div class="chip">🏖️ Coastal</div><div class="chip">🏔️ Mountains</div>
+      </div>
+    </div>
+    <!-- live globe -->
+    <div class="globe-card" onclick="showLiveGlobe()">
+      <div class="globe-glow"></div>
+      <div class="map-grid" style="opacity:.4"></div>
+      <div class="g-dot" style="top:40%;left:30%;background:var(--orange);animation-delay:0s"></div>
+      <div class="g-dot" style="top:55%;left:60%;background:var(--green);animation-delay:.5s"></div>
+      <div class="g-dot" style="top:30%;left:70%;background:var(--accent);animation-delay:1s"></div>
+      <div class="g-dot" style="top:65%;left:22%;background:var(--gold);animation-delay:1.5s"></div>
+      <div class="g-dot" style="top:25%;left:46%;background:var(--pink);animation-delay:.3s"></div>
+      <div class="globe-label">
+        <div class="globe-title">🌍 Live Journey Globe</div>
+        <div class="globe-sub">Every active journey, right now</div>
+      </div>
+      <div class="globe-count"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 1.4s infinite;display:inline-block"></span>247 Live</div>
+    </div>
+    <!-- trending -->
+    <div class="exp-section">
+      <div class="exp-sec-header"><div class="exp-sec-title">🔥 Trending Routes</div><div class="exp-see-all">See all →</div></div>
+      <div class="exp-card" onclick="go('s-timeline')">
+        <div class="exp-card-img">🏔️</div>
+        <div class="exp-card-body"><div class="exp-card-title">Manali → Leh Highway</div><div class="exp-card-meta">by @rohan · 2,480 km · 18 stops</div><div class="exp-card-tags"><div class="exp-ct">🏔️ Mountains</div><div class="exp-ct">🚗 Road</div><div class="exp-ct">⭐ 4.9</div></div></div>
+      </div>
+      <div class="exp-card" onclick="go('s-live')">
+        <div class="exp-card-img">🌊</div>
+        <div class="exp-card-body"><div class="exp-card-title">Mumbai → Goa Coastal Rail</div><div class="exp-card-meta">by @priya · 847 km · Live now</div><div class="exp-card-tags"><div class="exp-ct">🚂 Train</div><div class="exp-ct" style="color:var(--orange);background:#ff5f3d15">▶ Live</div></div></div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-card-img">🕌</div>
+        <div class="exp-card-body"><div class="exp-card-title">Rajasthan Fort Circuit</div><div class="exp-card-meta">by @heritage · 1,200 km · 5 days</div><div class="exp-card-tags"><div class="exp-ct">🏰 Heritage</div><div class="exp-ct">🚗 Road</div></div></div>
+      </div>
+    </div>
+    <!-- find companions -->
+    <div class="exp-section">
+      <div class="exp-sec-header"><div class="exp-sec-title">👥 Find Route Companions</div><div class="exp-see-all" onclick="go('s-companions')">Map →</div></div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px;display:flex;gap:11px;align-items:center;cursor:pointer" onclick="go('s-companions')">
+        <span style="font-size:26px">🎯</span>
+        <div><div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px">3 travelers near Surat</div><div style="font-size:11px;color:var(--text2)">@priya, @rohan, @arjun heading your way</div><div style="font-size:11px;color:var(--accent);margin-top:4px;font-weight:600">Find & Connect →</div></div>
+      </div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="go('s-home')"><div class="nav-icon">🏠</div><div class="nav-label">Home</div><div class="nav-dot"></div></div>
+    <div class="nav-item active" onclick="go('s-explore')"><div class="nav-icon">🔭</div><div class="nav-label">Explore</div><div class="nav-dot"></div></div>
+    <div class="nav-fab" onclick="go('s-log')">➕</div>
+    <div class="nav-item" onclick="go('s-messages')"><div class="nav-icon">💬</div><div class="nav-label">Chats</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div><div class="nav-dot"></div></div>
+  </div>
+</div>
+
+<!-- ═══ S11: PROFILE ═══ -->
+<div class="screen" id="s-profile">
+  <div class="status-bar" style="position:absolute;top:0;left:0;right:0;z-index:30"><span class="status-time">9:41</span><div class="status-icons"><div class="battery"><div class="battery-fill"></div></div></div></div>
+  <div class="screen-content">
+    <div class="profile-hero">
+      <div class="profile-bg-glow"></div>
+      <div class="profile-av-wrap"><div class="profile-av">M</div></div>
+      <div class="profile-badges"><div class="badge-icon">🏆</div><div class="badge-icon">🌙</div><div class="badge-icon">⛰️</div></div>
+    </div>
+    <div class="profile-info">
+      <div class="profile-name">Manish Patel</div>
+      <div class="profile-handle">@manish.wanderlust · Explorer Pro ⚡</div>
+      <div class="profile-bio">Chasing sunrises from train windows 🚂 · 12 states, 17 to go · Surat → everywhere</div>
+      <div class="profile-stats">
+        <div><div class="ps-val">28</div><div class="ps-lbl">Journeys</div></div>
+        <div><div class="ps-val">18.4k</div><div class="ps-lbl">km</div></div>
+        <div><div class="ps-val">247</div><div class="ps-lbl">Followers</div></div>
+        <div><div class="ps-val">5</div><div class="ps-lbl">Groups</div></div>
+      </div>
+      <div class="profile-acts">
+        <button class="pa-btn pa-edit">Edit Profile</button>
+        <button class="pa-btn pa-share">Share</button>
+        <button class="pa-btn" style="background:#22d47a15;color:var(--green);border:1px solid #22d47a30;flex:1" onclick="go('s-companions')">👥 Crew</button>
+      </div>
+    </div>
+    <!-- achievements -->
+    <div style="padding:4px 16px 8px"><div class="section-lbl">Achievements 🏅</div></div>
+    <div class="ach-scroll">
+      <div class="ach-card earned"><div class="ach-icon">🚂</div><div class="ach-name">Night Train Warrior</div></div>
+      <div class="ach-card earned"><div class="ach-icon">🏔️</div><div class="ach-name">Summit Logger</div></div>
+      <div class="ach-card earned"><div class="ach-icon">👥</div><div class="ach-name">Group Leader</div></div>
+      <div class="ach-card"><div class="ach-icon">✈️</div><div class="ach-name">Mile High Club</div></div>
+      <div class="ach-card"><div class="ach-icon">🆘</div><div class="ach-name">Guardian Angel</div></div>
+    </div>
+    <!-- tabs -->
+    <div class="profile-tab-row">
+      <div class="profile-tab active">Journeys</div>
+      <div class="profile-tab">Stats</div>
+      <div class="profile-tab">Groups</div>
+    </div>
+    <div class="journey-grid">
+      <div class="jg-card" onclick="go('s-timeline')"><div class="jg-img">🏔️<span class="jg-mode">🚗 Road</span></div><div class="jg-body"><div class="jg-title">Surat → Leh</div><div class="jg-meta">2,480 km · 8 days</div></div></div>
+      <div class="jg-card"><div class="jg-img">🌊<span class="jg-mode">🚂 Train</span></div><div class="jg-body"><div class="jg-title">Mumbai → Goa</div><div class="jg-meta">847 km · 3 days</div></div></div>
+      <div class="jg-card"><div class="jg-img">🕌<span class="jg-mode">🚌 Bus</span></div><div class="jg-body"><div class="jg-title">Rajasthan</div><div class="jg-meta">1,200 km · 5 days</div></div></div>
+      <div class="jg-card"><div class="jg-img">✈️<span class="jg-mode">✈️ Flight</span></div><div class="jg-body"><div class="jg-title">Andaman</div><div class="jg-meta">1,800 km · 6 days</div></div></div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="go('s-home')"><div class="nav-icon">🏠</div><div class="nav-label">Home</div><div class="nav-dot"></div></div>
+    <div class="nav-item" onclick="go('s-explore')"><div class="nav-icon">🔭</div><div class="nav-label">Explore</div><div class="nav-dot"></div></div>
+    <div class="nav-fab" onclick="go('s-log')">➕</div>
+    <div class="nav-item" onclick="go('s-messages')"><div class="nav-icon">💬</div><div class="nav-label">Chats</div><div class="nav-dot"></div></div>
+    <div class="nav-item active" onclick="go('s-profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div><div class="nav-dot"></div></div>
+  </div>
+</div>
+
+</div><!-- phone-shell -->
+</div><!-- phone-wrap -->
+
+<script>
+const SCREENS = ['s-splash','s-home','s-live','s-log','s-timeline','s-companions','s-messages','s-chat','s-safety','s-explore','s-profile'];
+
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const idx = SCREENS.indexOf(id);
+  const btns = document.querySelectorAll('.screen-btn');
+  if (btns[idx]) btns[idx].classList.add('active');
+  const sc = document.getElementById(id)?.querySelector('.screen-content');
+  if (sc) sc.scrollTop = 0;
+}
+
+function sosAlert() {
+  // Simulate SOS being sent
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:#ef444430;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn .3s ease;backdrop-filter:blur(4px)';
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1a0808,#2a0f0f);border:1.5px solid var(--red);border-radius:24px;padding:28px 24px;text-align:center;max-width:300px;box-shadow:0 20px 60px #ef444460">
+      <div style="font-size:50px;margin-bottom:12px;animation:float 1s ease-in-out infinite">🆘</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#ff5555;margin-bottom:8px">SOS Sent!</div>
+      <div style="font-size:13px;color:#ff9999;line-height:1.6;margin-bottom:16px">Your location has been shared with:<br><strong style="color:#fff">Mumbai Express Crew (6 members)</strong><br><strong style="color:#fff">Family (3 contacts)</strong></div>
+      <div style="background:var(--surface);border-radius:12px;padding:11px;margin-bottom:16px;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace">📍 19.0178°N 72.8478°E<br>Dadar Station, Mumbai</div>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:13px;background:var(--red);border:none;border-radius:12px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer">I'm Safe — Cancel SOS</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { if(document.body.contains(overlay)) overlay.remove(); }, 8000);
+}
+
+function respondSOS() {
+  const msgs = document.getElementById('chat-msgs');
+  const div = document.createElement('div');
+  div.className = 'msg-row mine';
+  div.innerHTML = `
+    <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--orange),var(--pink));font-size:12px">M</div>
+    <div>
+      <div class="msg-bubble" style="background:linear-gradient(135deg,#22d47a,#10b981)">✓ On my way! 2 mins to Platform 3 🏃‍♂️</div>
+      <div class="msg-time">Now</div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function sendChatMsg() {
+  const inp = document.getElementById('chat-input-field');
+  const text = inp.value.trim();
+  if (!text) return;
+  const msgs = document.getElementById('chat-msgs');
+  const div = document.createElement('div');
+  div.className = 'msg-row mine';
+  div.innerHTML = `
+    <div class="msg-av avatar" style="background:linear-gradient(135deg,var(--orange),var(--pink));font-size:12px">M</div>
+    <div>
+      <div class="msg-bubble">${text.replace(/</g,'&lt;')}</div>
+      <div class="msg-time">Now · ✓✓</div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  inp.value = '';
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter') sendChatMsg();
+}
+
+function showAttachMenu() {
+  const menu = document.createElement('div');
+  menu.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:14px;display:flex;gap:10px;z-index:999;box-shadow:0 20px 60px var(--shadow-strong);backdrop-filter:blur(20px)';
+  const opts = [['📍','Share Location'],['🖼️','Photo'],['🆘','Send SOS'],['📊','Share Stop']];
+  opts.forEach(([icon, label]) => {
+    const b = document.createElement('div');
+    b.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:8px 12px;border-radius:12px;transition:background .2s';
+    b.innerHTML = `<span style="font-size:26px">${icon}</span><span style="font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap">${label}</span>`;
+    b.addEventListener('mouseenter', () => b.style.background = 'var(--surface2)');
+    b.addEventListener('mouseleave', () => b.style.background = '');
+    b.onclick = () => {
+      menu.remove();
+      if (label === 'Send SOS') sosAlert();
+    };
+    menu.appendChild(b);
+  });
+  document.body.appendChild(menu);
+  setTimeout(() => { if(document.body.contains(menu)) menu.remove(); }, 4000);
+}
+
+function createGroup() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000000cc;z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px)';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:28px 28px 0 0;border:1px solid var(--border2);padding:20px;width:100%;max-width:390px">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 18px"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:14px">Create Travel Group</div>
+      <input placeholder="Group name (e.g. Mumbai Express Crew)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text);outline:none;margin-bottom:10px;font-family:'DM Sans',sans-serif">
+      <input placeholder="Route (e.g. Mumbai → Goa)" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text);outline:none;margin-bottom:14px;font-family:'DM Sans',sans-serif">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:8px">Invite Nearby Travelers</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--accent);border-radius:100px;padding:6px 12px;font-size:11px;color:var(--accent);font-weight:600">✓ @priya</div>
+        <div style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--green);border-radius:100px;padding:6px 12px;font-size:11px;color:var(--green);font-weight:600">✓ @rohan</div>
+        <div style="display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:11px;color:var(--text2);font-weight:600">+ @arjun</div>
+      </div>
+      <button onclick="this.closest('div[style*=fixed]').remove();go('s-chat')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),var(--gold));border:none;border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">🚀 Create Group</button>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border2);border-radius:14px;color:var(--text2);font-size:13px;cursor:pointer">Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function showLiveGlobe() {
+  alert('🌍 247 live journeys active worldwide right now!\nTap any dot on the globe to follow that journey live.');
+}
+
+// Scroll chat to bottom on load
+document.getElementById('chat-msgs').scrollTop = 99999;
+</script>
+</body>
+</html>
